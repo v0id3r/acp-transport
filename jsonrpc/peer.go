@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type Request struct {
@@ -87,7 +88,7 @@ func (p *Peer) Call(ctx context.Context, method string, params any) (json.RawMes
 	select {
 	case <-ctx.Done():
 		p.deletePending(key)
-		_ = p.Notify(context.Background(), "$/cancel_request", map[string]json.RawMessage{"requestId": id})
+		go p.notifyCancelRequest(id)
 		return nil, ctx.Err()
 	case resp, ok := <-respCh:
 		if !ok {
@@ -98,6 +99,12 @@ func (p *Peer) Call(ctx context.Context, method string, params any) (json.RawMes
 		}
 		return append(json.RawMessage(nil), resp.Result...), nil
 	}
+}
+
+func (p *Peer) notifyCancelRequest(id json.RawMessage) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	_ = p.Notify(ctx, "$/cancel_request", map[string]json.RawMessage{"requestId": id})
 }
 
 func (p *Peer) Notify(ctx context.Context, method string, params any) error {

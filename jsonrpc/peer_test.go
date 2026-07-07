@@ -3,6 +3,8 @@ package jsonrpc
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"reflect"
 	"sync"
 	"testing"
@@ -67,4 +69,94 @@ func TestPeerHandlesNotificationsInReceiveOrder(t *testing.T) {
 	if !reflect.DeepEqual(got, []int{1, 2}) {
 		t.Fatalf("notification order = %v, want [1 2]", got)
 	}
+}
+
+func TestPeerNilHandlerResultReturnsNull(t *testing.T) {
+	server, client := Pipe(8)
+	defer server.Close()
+	defer client.Close()
+
+	peer := NewPeer(server, HandlerFunc(func(context.Context, Request) (json.RawMessage, *Error) {
+		return nil, nil
+	}))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() { _ = peer.Serve(ctx) }()
+	clientPeer := NewPeer(client, nil)
+	go func() { _ = clientPeer.Serve(ctx) }()
+
+	got, err := clientPeer.Call(ctx, "empty", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "null" {
+		t.Fatalf("result = %s, want null", got)
+	}
+}
+
+func TestPeerCallReturnsBeforeCancelNotificationSendCompletes(t *testing.T) {
+	conn := &blockingCancelConn{
+		requestSent:   make(chan struct{}),
+		cancelStarted: make(chan struct{}),
+		releaseCancel: make(chan struct{}),
+	}
+	peer := NewPeer(conn, nil)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		_, err := peer.Call(ctx, "slow", nil)
+		done <- err
+	}()
+
+	<-conn.requestSent
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("Call error = %v, want context.Canceled", err)
+		}
+	case <-time.After(100 * time.Millisecond):
+		close(conn.releaseCancel)
+		t.Fatal("Call blocked on best-effort cancel notification")
+	}
+
+	select {
+	case <-conn.cancelStarted:
+	case <-time.After(time.Second):
+		t.Fatal("cancel notification was not attempted")
+	}
+	close(conn.releaseCancel)
+}
+
+type blockingCancelConn struct {
+	requestSent   chan struct{}
+	cancelStarted chan struct{}
+	releaseCancel chan struct{}
+	onceRequest   sync.Once
+	onceCancel    sync.Once
+}
+
+func (c *blockingCancelConn) Send(ctx context.Context, msg *Message) error {
+	if msg.Method == "$/cancel_request" {
+		c.onceCancel.Do(func() { close(c.cancelStarted) })
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-c.releaseCancel:
+			return nil
+		}
+	}
+	c.onceRequest.Do(func() { close(c.requestSent) })
+	return nil
+}
+
+func (*blockingCancelConn) Receive(ctx context.Context) (*Message, error) {
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+
+func (*blockingCancelConn) Close() error {
+	return io.EOF
 }

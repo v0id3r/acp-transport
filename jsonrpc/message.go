@@ -125,6 +125,9 @@ func NewRawResult(id json.RawMessage, result json.RawMessage) (*Message, error) 
 		ID:      cloneRawPtr(id),
 		Result:  cloneRaw(result),
 	}
+	if len(bytes.TrimSpace(msg.Result)) == 0 {
+		msg.Result = []byte("null")
+	}
 	return msg, msg.Validate()
 }
 
