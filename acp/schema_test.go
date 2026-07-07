@@ -114,7 +114,7 @@ func TestDecodeSessionUpdate(t *testing.T) {
 	}
 }
 
-func TestDecodeContentChunkRequiresMessageID(t *testing.T) {
+func TestDecodeContentChunkAllowsMissingMessageID(t *testing.T) {
 	tests := []SessionUpdateKind{
 		SessionUpdateUserMessageChunk,
 		SessionUpdateAgentMessageChunk,
@@ -126,8 +126,25 @@ func TestDecodeContentChunkRequiresMessageID(t *testing.T) {
 				"sessionUpdate": "` + string(kind) + `",
 				"content": {"type": "text", "text": "hello"}
 			}`)
-			if _, err := DecodeSessionUpdate(raw); err == nil {
-				t.Fatal("DecodeSessionUpdate succeeded without messageId")
+			decoded, err := DecodeSessionUpdate(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			switch update := decoded.(type) {
+			case UserMessageChunkUpdate:
+				if update.MessageID != "" {
+					t.Fatalf("messageId = %q, want empty", update.MessageID)
+				}
+			case AgentMessageChunkUpdate:
+				if update.MessageID != "" {
+					t.Fatalf("messageId = %q, want empty", update.MessageID)
+				}
+			case AgentThoughtChunkUpdate:
+				if update.MessageID != "" {
+					t.Fatalf("messageId = %q, want empty", update.MessageID)
+				}
+			default:
+				t.Fatalf("decoded type = %T", decoded)
 			}
 		})
 	}
