@@ -18,6 +18,7 @@ const (
 	SessionUpdateCurrentMode       SessionUpdateKind = "current_mode_update"
 	SessionUpdateConfigOption      SessionUpdateKind = "config_option_update"
 	SessionUpdateSessionInfo       SessionUpdateKind = "session_info_update"
+	SessionUpdateUsage             SessionUpdateKind = "usage_update"
 )
 
 type DecodedSessionUpdate interface {
@@ -89,6 +90,11 @@ type SessionInfoSessionUpdate struct {
 	SessionInfoUpdate
 }
 
+type UsageSessionUpdate struct {
+	sessionUpdateBase
+	UsageUpdate
+}
+
 type UnknownSessionUpdate struct {
 	sessionUpdateBase
 }
@@ -125,6 +131,7 @@ var sessionUpdateDecoders = map[SessionUpdateKind]func(json.RawMessage) (Decoded
 	SessionUpdateCurrentMode:       decodeUpdateAs[CurrentModeSessionUpdate],
 	SessionUpdateConfigOption:      decodeUpdateAs[ConfigOptionSessionUpdate],
 	SessionUpdateSessionInfo:       decodeUpdateAs[SessionInfoSessionUpdate],
+	SessionUpdateUsage:             decodeUpdateAs[UsageSessionUpdate],
 }
 
 func DecodeSessionUpdate(raw json.RawMessage) (DecodedSessionUpdate, error) {

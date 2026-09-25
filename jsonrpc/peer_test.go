@@ -160,3 +160,42 @@ func (*blockingCancelConn) Receive(ctx context.Context) (*Message, error) {
 func (*blockingCancelConn) Close() error {
 	return io.EOF
 }
+
+func TestPeerCancelRequestCancelsInboundHandler(t *testing.T) {
+	server, client := Pipe(8)
+	defer server.Close()
+	defer client.Close()
+
+	peer := NewPeer(server, HandlerFunc(func(ctx context.Context, _ Request) (json.RawMessage, *Error) {
+		<-ctx.Done()
+		return json.RawMessage(`{"outcome":"cancelled"}`), nil
+	}))
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() { _ = peer.Serve(ctx) }()
+
+	req, err := NewRequest(json.RawMessage(`7`), "session/request_permission", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	note, err := NewNotification(cancelRequestMethod, map[string]int{"requestId": 7})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := client.Send(ctx, req); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.Send(ctx, note); err != nil {
+		t.Fatal(err)
+	}
+
+	recvCtx, recvCancel := context.WithTimeout(ctx, time.Second)
+	defer recvCancel()
+	resp, err := client.Receive(recvCtx)
+	if err != nil {
+		t.Fatalf("waiting for cancelled response: %v", err)
+	}
+	if string(*resp.ID) != "7" || string(resp.Result) != `{"outcome":"cancelled"}` {
+		t.Fatalf("response = id %s result %s", *resp.ID, resp.Result)
+	}
+}

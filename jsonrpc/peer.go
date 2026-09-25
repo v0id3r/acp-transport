@@ -9,6 +9,8 @@ import (
 	"time"
 )
 
+const cancelRequestMethod = "$/cancel_request"
+
 type Request struct {
 	ID     json.RawMessage
 	Method string
@@ -30,15 +32,17 @@ type Peer struct {
 	handler Handler
 	nextID  atomic.Uint64
 
-	mu      sync.Mutex
-	pending map[string]chan *Message
+	mu       sync.Mutex
+	pending  map[string]chan *Message
+	handling map[string]context.CancelFunc
 }
 
 func NewPeer(conn MessageConn, handler Handler) *Peer {
 	return &Peer{
-		conn:    conn,
-		handler: handler,
-		pending: make(map[string]chan *Message),
+		conn:     conn,
+		handler:  handler,
+		pending:  make(map[string]chan *Message),
+		handling: make(map[string]context.CancelFunc),
 	}
 }
 
@@ -54,7 +58,11 @@ func (p *Peer) Serve(ctx context.Context) error {
 		case msg.IsResponse():
 			p.handleResponse(msg)
 		case msg.IsRequest():
-			go p.handleRequest(ctx, msg)
+			reqCtx, done := p.trackHandling(ctx, msg)
+			go func() {
+				defer done()
+				p.handleRequest(reqCtx, msg)
+			}()
 		case msg.IsNotification():
 			p.handleNotification(ctx, msg)
 		default:
@@ -104,7 +112,7 @@ func (p *Peer) Call(ctx context.Context, method string, params any) (json.RawMes
 func (p *Peer) notifyCancelRequest(id json.RawMessage) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	_ = p.Notify(ctx, "$/cancel_request", map[string]json.RawMessage{"requestId": id})
+	_ = p.Notify(ctx, cancelRequestMethod, map[string]json.RawMessage{"requestId": id})
 }
 
 func (p *Peer) Notify(ctx context.Context, method string, params any) error {
@@ -161,6 +169,10 @@ func (p *Peer) handleRequest(ctx context.Context, msg *Message) {
 }
 
 func (p *Peer) handleNotification(ctx context.Context, msg *Message) {
+	if msg.Method == cancelRequestMethod {
+		p.cancelHandling(msg.Params)
+		return
+	}
 	if p.handler == nil {
 		return
 	}
@@ -168,6 +180,43 @@ func (p *Peer) handleNotification(ctx context.Context, msg *Message) {
 		Method: msg.Method,
 		Params: append(json.RawMessage(nil), msg.Params...),
 	})
+}
+
+// trackHandling registers an inbound request before its handler starts so a
+// $/cancel_request that follows it on the wire always finds it.
+func (p *Peer) trackHandling(ctx context.Context, msg *Message) (context.Context, func()) {
+	key, _ := IDKey(*msg.ID)
+	ctx, cancel := context.WithCancel(ctx)
+	p.mu.Lock()
+	p.handling[key] = cancel
+	p.mu.Unlock()
+	return ctx, func() {
+		p.mu.Lock()
+		delete(p.handling, key)
+		p.mu.Unlock()
+		cancel()
+	}
+}
+
+// cancelHandling cancels the context of an inbound request named by
+// $/cancel_request; the handler still owns the response it sends.
+func (p *Peer) cancelHandling(params json.RawMessage) {
+	var note struct {
+		RequestID json.RawMessage `json:"requestId"`
+	}
+	if json.Unmarshal(params, &note) != nil {
+		return
+	}
+	key, err := IDKey(note.RequestID)
+	if err != nil {
+		return
+	}
+	p.mu.Lock()
+	cancel := p.handling[key]
+	p.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
 }
 
 func (p *Peer) deletePending(key string) {

@@ -96,6 +96,15 @@ func TestDecodeSessionUpdate(t *testing.T) {
 		t.Fatalf("unknown decoded as %T", unknown)
 	}
 
+	decoded, err = DecodeSessionUpdate(json.RawMessage(`{"sessionUpdate":"usage_update","used":1200,"size":200000,"cost":{"amount":0.25,"currency":"USD"}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	usage, ok := decoded.(UsageSessionUpdate)
+	if !ok || usage.Used != 1200 || usage.Size != 200000 || usage.Cost == nil || usage.Cost.Amount != 0.25 {
+		t.Fatalf("usage decoded as %#v", decoded)
+	}
+
 	rawMessage := json.RawMessage(`{
 		"sessionUpdate": "agent_message_chunk",
 		"messageId": "message-1",
@@ -109,8 +118,8 @@ func TestDecodeSessionUpdate(t *testing.T) {
 	if !ok {
 		t.Fatalf("decoded type = %T, want AgentMessageChunkUpdate", decoded)
 	}
-	if message.MessageID != "message-1" {
-		t.Fatalf("messageId = %q, want message-1", message.MessageID)
+	if message.MessageID == nil || *message.MessageID != "message-1" {
+		t.Fatalf("messageId = %v, want message-1", message.MessageID)
 	}
 }
 
@@ -132,16 +141,16 @@ func TestDecodeContentChunkAllowsMissingMessageID(t *testing.T) {
 			}
 			switch update := decoded.(type) {
 			case UserMessageChunkUpdate:
-				if update.MessageID != "" {
-					t.Fatalf("messageId = %q, want empty", update.MessageID)
+				if update.MessageID != nil {
+					t.Fatalf("messageId = %q, want nil", *update.MessageID)
 				}
 			case AgentMessageChunkUpdate:
-				if update.MessageID != "" {
-					t.Fatalf("messageId = %q, want empty", update.MessageID)
+				if update.MessageID != nil {
+					t.Fatalf("messageId = %q, want nil", *update.MessageID)
 				}
 			case AgentThoughtChunkUpdate:
-				if update.MessageID != "" {
-					t.Fatalf("messageId = %q, want empty", update.MessageID)
+				if update.MessageID != nil {
+					t.Fatalf("messageId = %q, want nil", *update.MessageID)
 				}
 			default:
 				t.Fatalf("decoded type = %T", decoded)

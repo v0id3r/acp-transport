@@ -12,6 +12,7 @@ const (
 	AgentMethodLogout                 = "logout"
 	AgentMethodSessionCancel          = "session/cancel"
 	AgentMethodSessionClose           = "session/close"
+	AgentMethodSessionDelete          = "session/delete"
 	AgentMethodSessionList            = "session/list"
 	AgentMethodSessionLoad            = "session/load"
 	AgentMethodSessionNew             = "session/new"
@@ -33,6 +34,10 @@ const (
 	ClientMethodTerminalOutput           = "terminal/output"
 	ClientMethodTerminalRelease          = "terminal/release"
 	ClientMethodTerminalWaitForExit      = "terminal/wait_for_exit"
+)
+
+const (
+	ProtocolMethodCancelRequest = "$/cancel_request"
 )
 
 type AgentAuthCapabilities struct {
@@ -76,18 +81,34 @@ type AudioContent struct {
 	MimeType    string         `json:"mimeType"`
 }
 
-type AuthMethod AuthMethodAgent
+type AuthCapabilities struct {
+	Meta     map[string]any `json:"_meta,omitempty"`
+	Terminal bool           `json:"terminal,omitempty"`
+}
+
+type AuthMethod json.RawMessage
 
 type AuthMethodAgent struct {
 	Meta        map[string]any `json:"_meta,omitempty"`
 	Description string         `json:"description,omitempty"`
-	ID          string         `json:"id"`
+	ID          AuthMethodID   `json:"id"`
 	Name        string         `json:"name"`
+}
+
+type AuthMethodID string
+
+type AuthMethodTerminal struct {
+	Meta        map[string]any    `json:"_meta,omitempty"`
+	Args        []string          `json:"args,omitempty"`
+	Description string            `json:"description,omitempty"`
+	Env         map[string]string `json:"env,omitempty"`
+	ID          AuthMethodID      `json:"id"`
+	Name        string            `json:"name"`
 }
 
 type AuthenticateRequest struct {
 	Meta     map[string]any `json:"_meta,omitempty"`
-	MethodID string         `json:"methodId"`
+	MethodID AuthMethodID   `json:"methodId"`
 }
 
 type AuthenticateResponse struct {
@@ -115,6 +136,10 @@ type BlobResourceContents struct {
 	URI      string         `json:"uri"`
 }
 
+type BooleanConfigOptionCapabilities struct {
+	Meta map[string]any `json:"_meta,omitempty"`
+}
+
 type BooleanPropertySchema struct {
 	Meta        map[string]any `json:"_meta,omitempty"`
 	Default     bool           `json:"default,omitempty"`
@@ -127,11 +152,18 @@ type CancelNotification struct {
 	SessionID SessionID      `json:"sessionId"`
 }
 
+type CancelRequestNotification struct {
+	Meta      map[string]any `json:"_meta,omitempty"`
+	RequestID RequestID      `json:"requestId"`
+}
+
 type ClientCapabilities struct {
-	Meta        map[string]any           `json:"_meta,omitempty"`
-	Elicitation *ElicitationCapabilities `json:"elicitation,omitempty"`
-	FS          *FileSystemCapabilities  `json:"fs,omitempty"`
-	Terminal    bool                     `json:"terminal,omitempty"`
+	Meta        map[string]any             `json:"_meta,omitempty"`
+	Auth        *AuthCapabilities          `json:"auth,omitempty"`
+	Elicitation *ElicitationCapabilities   `json:"elicitation,omitempty"`
+	FS          *FileSystemCapabilities    `json:"fs,omitempty"`
+	Session     *ClientSessionCapabilities `json:"session,omitempty"`
+	Terminal    bool                       `json:"terminal,omitempty"`
 }
 
 type ClientNotification struct {
@@ -146,6 +178,11 @@ type ClientRequest struct {
 }
 
 type ClientResponse json.RawMessage
+
+type ClientSessionCapabilities struct {
+	Meta          map[string]any                    `json:"_meta,omitempty"`
+	ConfigOptions *SessionConfigOptionsCapabilities `json:"configOptions,omitempty"`
+}
 
 type CloseSessionRequest struct {
 	Meta      map[string]any `json:"_meta,omitempty"`
@@ -176,14 +213,20 @@ type ContentBlock json.RawMessage
 type ContentChunk struct {
 	Meta      map[string]any `json:"_meta,omitempty"`
 	Content   ContentBlock   `json:"content"`
-	MessageID string         `json:"messageId"`
+	MessageID *MessageID     `json:"messageId,omitempty"`
+}
+
+type Cost struct {
+	Meta     map[string]any `json:"_meta,omitempty"`
+	Amount   float64        `json:"amount"`
+	Currency string         `json:"currency"`
 }
 
 type CreateElicitationRequest struct {
 	Meta            map[string]any     `json:"_meta,omitempty"`
 	ElicitationID   *ElicitationID     `json:"elicitationId,omitempty"`
 	Message         string             `json:"message"`
-	Mode            string             `json:"mode"`
+	Mode            string             `json:"mode,omitempty"`
 	RequestID       *RequestID         `json:"requestId,omitempty"`
 	RequestedSchema *ElicitationSchema `json:"requestedSchema,omitempty"`
 	SessionID       *SessionID         `json:"sessionId,omitempty"`
@@ -193,7 +236,7 @@ type CreateElicitationRequest struct {
 
 type CreateElicitationResponse struct {
 	Meta    map[string]any                     `json:"_meta,omitempty"`
-	Action  string                             `json:"action"`
+	Action  string                             `json:"action,omitempty"`
 	Content map[string]ElicitationContentValue `json:"content,omitempty"`
 }
 
@@ -209,12 +252,21 @@ type CreateTerminalRequest struct {
 
 type CreateTerminalResponse struct {
 	Meta       map[string]any `json:"_meta,omitempty"`
-	TerminalID string         `json:"terminalId"`
+	TerminalID TerminalID     `json:"terminalId"`
 }
 
 type CurrentModeUpdate struct {
 	Meta          map[string]any `json:"_meta,omitempty"`
 	CurrentModeID SessionModeID  `json:"currentModeId"`
+}
+
+type DeleteSessionRequest struct {
+	Meta      map[string]any `json:"_meta,omitempty"`
+	SessionID SessionID      `json:"sessionId"`
+}
+
+type DeleteSessionResponse struct {
+	Meta map[string]any `json:"_meta,omitempty"`
 }
 
 type Diff struct {
@@ -251,21 +303,21 @@ type ElicitationID string
 
 type ElicitationPropertySchema struct {
 	Meta        map[string]any    `json:"_meta,omitempty"`
-	Default     json.RawMessage   `json:"default,omitempty"`
+	Default     any               `json:"default,omitempty"`
 	Description string            `json:"description,omitempty"`
 	Enum        []string          `json:"enum,omitempty"`
 	Format      *StringFormat     `json:"format,omitempty"`
 	Items       *MultiSelectItems `json:"items,omitempty"`
 	MaxItems    int               `json:"maxItems,omitempty"`
 	MaxLength   int               `json:"maxLength,omitempty"`
-	Maximum     json.RawMessage   `json:"maximum,omitempty"`
+	Maximum     any               `json:"maximum,omitempty"`
 	MinItems    int               `json:"minItems,omitempty"`
 	MinLength   int               `json:"minLength,omitempty"`
-	Minimum     json.RawMessage   `json:"minimum,omitempty"`
+	Minimum     any               `json:"minimum,omitempty"`
 	OneOf       []EnumOption      `json:"oneOf,omitempty"`
 	Pattern     string            `json:"pattern,omitempty"`
 	Title       string            `json:"title,omitempty"`
-	Type        string            `json:"type"`
+	Type        string            `json:"type,omitempty"`
 }
 
 type ElicitationRequestScope struct {
@@ -292,12 +344,6 @@ type ElicitationSessionScope struct {
 	ToolCallID *ToolCallID `json:"toolCallId,omitempty"`
 }
 
-type ElicitationStringType string
-
-const (
-	ElicitationStringTypeString ElicitationStringType = "string"
-)
-
 type ElicitationURLCapabilities struct {
 	Meta map[string]any `json:"_meta,omitempty"`
 }
@@ -319,9 +365,10 @@ type EmbeddedResource struct {
 type EmbeddedResourceResource json.RawMessage
 
 type EnumOption struct {
-	Meta  map[string]any `json:"_meta,omitempty"`
-	Const string         `json:"const"`
-	Title string         `json:"title"`
+	Meta        map[string]any `json:"_meta,omitempty"`
+	Const       string         `json:"const"`
+	Description string         `json:"description,omitempty"`
+	Title       string         `json:"title"`
 }
 
 type EnvVariable struct {
@@ -344,6 +391,7 @@ const (
 	ErrorCode32601 ErrorCode = -32601
 	ErrorCode32602 ErrorCode = -32602
 	ErrorCode32603 ErrorCode = -32603
+	ErrorCode32800 ErrorCode = -32800
 	ErrorCode32000 ErrorCode = -32000
 	ErrorCode32002 ErrorCode = -32002
 )
@@ -408,7 +456,7 @@ type IntegerPropertySchema struct {
 type KillTerminalRequest struct {
 	Meta       map[string]any `json:"_meta,omitempty"`
 	SessionID  SessionID      `json:"sessionId"`
-	TerminalID string         `json:"terminalId"`
+	TerminalID TerminalID     `json:"terminalId"`
 }
 
 type KillTerminalResponse struct {
@@ -428,10 +476,11 @@ type ListSessionsResponse struct {
 }
 
 type LoadSessionRequest struct {
-	Meta       map[string]any `json:"_meta,omitempty"`
-	Cwd        string         `json:"cwd"`
-	MCPServers []MCPServer    `json:"mcpServers"`
-	SessionID  SessionID      `json:"sessionId"`
+	Meta                  map[string]any `json:"_meta,omitempty"`
+	AdditionalDirectories []string       `json:"additionalDirectories,omitempty"`
+	Cwd                   string         `json:"cwd"`
+	MCPServers            []MCPServer    `json:"mcpServers"`
+	SessionID             SessionID      `json:"sessionId"`
 }
 
 type LoadSessionResponse struct {
@@ -482,11 +531,13 @@ type MCPServerStdio struct {
 	Name    string         `json:"name"`
 }
 
+type MessageID string
+
 type MultiSelectItems struct {
-	Meta  map[string]any         `json:"_meta,omitempty"`
-	AnyOf []EnumOption           `json:"anyOf,omitempty"`
-	Enum  []string               `json:"enum,omitempty"`
-	Type  *ElicitationStringType `json:"type,omitempty"`
+	Meta  map[string]any `json:"_meta,omitempty"`
+	AnyOf []EnumOption   `json:"anyOf,omitempty"`
+	Enum  []string       `json:"enum,omitempty"`
+	Type  string         `json:"type,omitempty"`
 }
 
 type MultiSelectPropertySchema struct {
@@ -500,9 +551,10 @@ type MultiSelectPropertySchema struct {
 }
 
 type NewSessionRequest struct {
-	Meta       map[string]any `json:"_meta,omitempty"`
-	Cwd        string         `json:"cwd"`
-	MCPServers []MCPServer    `json:"mcpServers"`
+	Meta                  map[string]any `json:"_meta,omitempty"`
+	AdditionalDirectories []string       `json:"additionalDirectories,omitempty"`
+	Cwd                   string         `json:"cwd"`
+	MCPServers            []MCPServer    `json:"mcpServers"`
 }
 
 type NewSessionResponse struct {
@@ -603,7 +655,7 @@ type ReadTextFileResponse struct {
 type ReleaseTerminalRequest struct {
 	Meta       map[string]any `json:"_meta,omitempty"`
 	SessionID  SessionID      `json:"sessionId"`
-	TerminalID string         `json:"terminalId"`
+	TerminalID TerminalID     `json:"terminalId"`
 }
 
 type ReleaseTerminalResponse struct {
@@ -638,10 +690,11 @@ type ResourceLink struct {
 }
 
 type ResumeSessionRequest struct {
-	Meta       map[string]any `json:"_meta,omitempty"`
-	Cwd        string         `json:"cwd"`
-	MCPServers []MCPServer    `json:"mcpServers,omitempty"`
-	SessionID  SessionID      `json:"sessionId"`
+	Meta                  map[string]any `json:"_meta,omitempty"`
+	AdditionalDirectories []string       `json:"additionalDirectories,omitempty"`
+	Cwd                   string         `json:"cwd"`
+	MCPServers            []MCPServer    `json:"mcpServers,omitempty"`
+	SessionID             SessionID      `json:"sessionId"`
 }
 
 type ResumeSessionResponse struct {
@@ -662,15 +715,25 @@ type SelectedPermissionOutcome struct {
 	OptionID PermissionOptionID `json:"optionId"`
 }
 
+type SessionAdditionalDirectoriesCapabilities struct {
+	Meta map[string]any `json:"_meta,omitempty"`
+}
+
 type SessionCapabilities struct {
-	Meta   map[string]any             `json:"_meta,omitempty"`
-	Close  *SessionCloseCapabilities  `json:"close,omitempty"`
-	List   *SessionListCapabilities   `json:"list,omitempty"`
-	Resume *SessionResumeCapabilities `json:"resume,omitempty"`
+	Meta                  map[string]any                            `json:"_meta,omitempty"`
+	AdditionalDirectories *SessionAdditionalDirectoriesCapabilities `json:"additionalDirectories,omitempty"`
+	Close                 *SessionCloseCapabilities                 `json:"close,omitempty"`
+	Delete                *SessionDeleteCapabilities                `json:"delete,omitempty"`
+	List                  *SessionListCapabilities                  `json:"list,omitempty"`
+	Resume                *SessionResumeCapabilities                `json:"resume,omitempty"`
 }
 
 type SessionCloseCapabilities struct {
 	Meta map[string]any `json:"_meta,omitempty"`
+}
+
+type SessionConfigBoolean struct {
+	CurrentValue bool `json:"currentValue"`
 }
 
 type SessionConfigGroupID string
@@ -690,8 +753,14 @@ type SessionConfigOptionCategory string
 const (
 	SessionConfigOptionCategoryMode         SessionConfigOptionCategory = "mode"
 	SessionConfigOptionCategoryModel        SessionConfigOptionCategory = "model"
+	SessionConfigOptionCategoryModelConfig  SessionConfigOptionCategory = "model_config"
 	SessionConfigOptionCategoryThoughtLevel SessionConfigOptionCategory = "thought_level"
 )
+
+type SessionConfigOptionsCapabilities struct {
+	Meta    map[string]any                   `json:"_meta,omitempty"`
+	Boolean *BooleanConfigOptionCapabilities `json:"boolean,omitempty"`
+}
 
 type SessionConfigSelect struct {
 	CurrentValue SessionConfigValueID       `json:"currentValue"`
@@ -716,14 +785,19 @@ type SessionConfigSelectOptions json.RawMessage
 
 type SessionConfigValueID string
 
+type SessionDeleteCapabilities struct {
+	Meta map[string]any `json:"_meta,omitempty"`
+}
+
 type SessionID string
 
 type SessionInfo struct {
-	Meta      map[string]any `json:"_meta,omitempty"`
-	Cwd       string         `json:"cwd"`
-	SessionID SessionID      `json:"sessionId"`
-	Title     string         `json:"title,omitempty"`
-	UpdatedAt string         `json:"updatedAt,omitempty"`
+	Meta                  map[string]any `json:"_meta,omitempty"`
+	AdditionalDirectories []string       `json:"additionalDirectories,omitempty"`
+	Cwd                   string         `json:"cwd"`
+	SessionID             SessionID      `json:"sessionId"`
+	Title                 string         `json:"title,omitempty"`
+	UpdatedAt             string         `json:"updatedAt,omitempty"`
 }
 
 type SessionInfoUpdate struct {
@@ -764,10 +838,10 @@ type SessionResumeCapabilities struct {
 type SessionUpdate json.RawMessage
 
 type SetSessionConfigOptionRequest struct {
-	Meta      map[string]any       `json:"_meta,omitempty"`
-	ConfigID  SessionConfigID      `json:"configId"`
-	SessionID SessionID            `json:"sessionId"`
-	Value     SessionConfigValueID `json:"value"`
+	Meta      map[string]any  `json:"_meta,omitempty"`
+	ConfigID  SessionConfigID `json:"configId"`
+	SessionID SessionID       `json:"sessionId"`
+	Value     any             `json:"value,omitempty"`
 }
 
 type SetSessionConfigOptionResponse struct {
@@ -804,6 +878,11 @@ const (
 	StringFormatDateTime StringFormat = "date-time"
 )
 
+type StringMultiSelectItems struct {
+	Meta map[string]any `json:"_meta,omitempty"`
+	Enum []string       `json:"enum"`
+}
+
 type StringPropertySchema struct {
 	Meta        map[string]any `json:"_meta,omitempty"`
 	Default     string         `json:"default,omitempty"`
@@ -819,7 +898,7 @@ type StringPropertySchema struct {
 
 type Terminal struct {
 	Meta       map[string]any `json:"_meta,omitempty"`
-	TerminalID string         `json:"terminalId"`
+	TerminalID TerminalID     `json:"terminalId"`
 }
 
 type TerminalExitStatus struct {
@@ -828,10 +907,12 @@ type TerminalExitStatus struct {
 	Signal   string         `json:"signal,omitempty"`
 }
 
+type TerminalID string
+
 type TerminalOutputRequest struct {
 	Meta       map[string]any `json:"_meta,omitempty"`
 	SessionID  SessionID      `json:"sessionId"`
-	TerminalID string         `json:"terminalId"`
+	TerminalID TerminalID     `json:"terminalId"`
 }
 
 type TerminalOutputResponse struct {
@@ -864,6 +945,7 @@ type ToolCall struct {
 	Content    []ToolCallContent  `json:"content,omitempty"`
 	Kind       *ToolKind          `json:"kind,omitempty"`
 	Locations  []ToolCallLocation `json:"locations,omitempty"`
+	Name       string             `json:"name,omitempty"`
 	RawInput   json.RawMessage    `json:"rawInput,omitempty"`
 	RawOutput  json.RawMessage    `json:"rawOutput,omitempty"`
 	Status     *ToolCallStatus    `json:"status,omitempty"`
@@ -895,6 +977,7 @@ type ToolCallUpdate struct {
 	Content    []ToolCallContent  `json:"content,omitempty"`
 	Kind       *ToolKind          `json:"kind,omitempty"`
 	Locations  []ToolCallLocation `json:"locations,omitempty"`
+	Name       string             `json:"name,omitempty"`
 	RawInput   json.RawMessage    `json:"rawInput,omitempty"`
 	RawOutput  json.RawMessage    `json:"rawOutput,omitempty"`
 	Status     *ToolCallStatus    `json:"status,omitempty"`
@@ -922,16 +1005,17 @@ type UnstructuredCommandInput struct {
 	Hint string         `json:"hint"`
 }
 
-type UntitledMultiSelectItems struct {
-	Meta map[string]any        `json:"_meta,omitempty"`
-	Enum []string              `json:"enum"`
-	Type ElicitationStringType `json:"type"`
+type UsageUpdate struct {
+	Meta map[string]any `json:"_meta,omitempty"`
+	Cost *Cost          `json:"cost,omitempty"`
+	Size int            `json:"size"`
+	Used int            `json:"used"`
 }
 
 type WaitForTerminalExitRequest struct {
 	Meta       map[string]any `json:"_meta,omitempty"`
 	SessionID  SessionID      `json:"sessionId"`
-	TerminalID string         `json:"terminalId"`
+	TerminalID TerminalID     `json:"terminalId"`
 }
 
 type WaitForTerminalExitResponse struct {

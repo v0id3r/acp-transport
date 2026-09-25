@@ -35,9 +35,10 @@ type schemaDef struct {
 }
 
 type metaFile struct {
-	Version       int               `json:"version"`
-	AgentMethods  map[string]string `json:"agentMethods"`
-	ClientMethods map[string]string `json:"clientMethods"`
+	Version         int               `json:"version"`
+	AgentMethods    map[string]string `json:"agentMethods"`
+	ClientMethods   map[string]string `json:"clientMethods"`
+	ProtocolMethods map[string]string `json:"protocolMethods"`
 }
 
 var defs map[string]*schemaDef
@@ -58,6 +59,7 @@ func main() {
 	fmt.Fprintf(&buf, "const ProtocolVersionNumber = %d\n\n", meta.Version)
 	writeMethods(&buf, "Agent", meta.AgentMethods)
 	writeMethods(&buf, "Client", meta.ClientMethods)
+	writeMethods(&buf, "Protocol", meta.ProtocolMethods)
 
 	names := make([]string, 0, len(sch.Defs))
 	for name := range sch.Defs {
@@ -203,7 +205,8 @@ func flattenObject(name string) bool {
 		"MultiSelectPropertySchema",
 		"MultiSelectItems",
 		"TitledMultiSelectItems",
-		"UntitledMultiSelectItems":
+		"StringMultiSelectItems",
+		"SetSessionConfigOptionRequest":
 		return true
 	default:
 		return false
@@ -239,7 +242,7 @@ func collectObjectProperties(def *schemaDef, out map[string]*schemaDef, seen map
 
 func mergeProperty(out map[string]*schemaDef, key string, prop *schemaDef) {
 	if existing, ok := out[key]; ok && goType(existing, true) != goType(prop, true) {
-		out[key] = &schemaDef{}
+		out[key] = &schemaDef{Type: "any"}
 		return
 	}
 	out[key] = prop
@@ -333,6 +336,9 @@ func goType(def *schemaDef, field bool) string {
 	}
 	if def.Ref != "" {
 		return refName(def.Ref)
+	}
+	if hasType(def, "any") {
+		return "any"
 	}
 	if len(def.AllOf) == 1 {
 		return goType(def.AllOf[0], field)
