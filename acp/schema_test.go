@@ -286,3 +286,20 @@ func TestDecodeTextContentBlock(t *testing.T) {
 		t.Fatalf("unexpected text block %#v", text)
 	}
 }
+
+func TestInitializeResponseDecodesAuthMethodUnion(t *testing.T) {
+	raw := []byte(`{"protocolVersion":1,
+		"agentCapabilities":{"loadSession":true,"sessionCapabilities":{"resume":{}}},
+		"authMethods":[{"id":"cached_token","name":"cached_token"},{"type":"terminal","id":"login","name":"Log in","args":["login"]}]}`)
+	var resp InitializeResponse
+	if err := json.Unmarshal(raw, &resp); err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.AuthMethods) != 2 || resp.AgentCapabilities.SessionCapabilities.Resume == nil {
+		t.Fatalf("initialize = %#v", resp)
+	}
+	var terminal AuthMethodTerminal
+	if err := json.Unmarshal(resp.AuthMethods[1], &terminal); err != nil || terminal.ID != "login" {
+		t.Fatalf("terminal auth = %#v, %v", terminal, err)
+	}
+}

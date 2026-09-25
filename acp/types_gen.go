@@ -65,7 +65,7 @@ type AgentRequest struct {
 	Params json.RawMessage `json:"params,omitempty"`
 }
 
-type AgentResponse json.RawMessage
+type AgentResponse = json.RawMessage
 
 type Annotations struct {
 	Meta         map[string]any `json:"_meta,omitempty"`
@@ -86,7 +86,7 @@ type AuthCapabilities struct {
 	Terminal bool           `json:"terminal,omitempty"`
 }
 
-type AuthMethod json.RawMessage
+type AuthMethod = json.RawMessage
 
 type AuthMethodAgent struct {
 	Meta        map[string]any `json:"_meta,omitempty"`
@@ -177,7 +177,7 @@ type ClientRequest struct {
 	Params json.RawMessage `json:"params,omitempty"`
 }
 
-type ClientResponse json.RawMessage
+type ClientResponse = json.RawMessage
 
 type ClientSessionCapabilities struct {
 	Meta          map[string]any                    `json:"_meta,omitempty"`
@@ -362,7 +362,7 @@ type EmbeddedResource struct {
 	Resource    EmbeddedResourceResource `json:"resource"`
 }
 
-type EmbeddedResourceResource json.RawMessage
+type EmbeddedResourceResource = json.RawMessage
 
 type EnumOption struct {
 	Meta        map[string]any `json:"_meta,omitempty"`
@@ -396,11 +396,11 @@ const (
 	ErrorCode32002 ErrorCode = -32002
 )
 
-type ExtNotification json.RawMessage
+type ExtNotification = json.RawMessage
 
-type ExtRequest json.RawMessage
+type ExtRequest = json.RawMessage
 
-type ExtResponse json.RawMessage
+type ExtResponse = json.RawMessage
 
 type FileSystemCapabilities struct {
 	Meta          map[string]any `json:"_meta,omitempty"`
@@ -507,7 +507,7 @@ type MCPCapabilities struct {
 	SSE  bool           `json:"sse,omitempty"`
 }
 
-type MCPServer json.RawMessage
+type MCPServer = json.RawMessage
 
 type MCPServerHTTP struct {
 	Meta    map[string]any `json:"_meta,omitempty"`
@@ -662,7 +662,7 @@ type ReleaseTerminalResponse struct {
 	Meta map[string]any `json:"_meta,omitempty"`
 }
 
-type RequestID json.RawMessage
+type RequestID = json.RawMessage
 
 type RequestPermissionOutcome json.RawMessage
 
@@ -781,7 +781,7 @@ type SessionConfigSelectOption struct {
 	Value       SessionConfigValueID `json:"value"`
 }
 
-type SessionConfigSelectOptions json.RawMessage
+type SessionConfigSelectOptions = json.RawMessage
 
 type SessionConfigValueID string
 
@@ -835,7 +835,7 @@ type SessionResumeCapabilities struct {
 	Meta map[string]any `json:"_meta,omitempty"`
 }
 
-type SessionUpdate json.RawMessage
+type SessionUpdate = json.RawMessage
 
 type SetSessionConfigOptionRequest struct {
 	Meta      map[string]any  `json:"_meta,omitempty"`

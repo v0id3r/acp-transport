@@ -153,16 +153,19 @@ func writeDef(buf *bytes.Buffer, name string, def *schemaDef) {
 	}
 
 	typ := goType(def, false)
-	if typ == "json.RawMessage" && rawMessageAlias(goName) {
+	if typ == "json.RawMessage" && !hasJSONMethods(goName) {
 		fmt.Fprintf(buf, "type %s = %s\n\n", goName, typ)
 		return
 	}
 	fmt.Fprintf(buf, "type %s %s\n\n", goName, typ)
 }
 
-func rawMessageAlias(goName string) bool {
+// hasJSONMethods names raw unions that acp/decode.go gives JSON methods. Every
+// other raw union aliases json.RawMessage: a defined []byte type would drop
+// RawMessage's methods and fail to decode objects.
+func hasJSONMethods(goName string) bool {
 	switch goName {
-	case "ToolCallContent", "ElicitationContentValue":
+	case "ContentBlock", "RequestPermissionOutcome":
 		return true
 	default:
 		return false
