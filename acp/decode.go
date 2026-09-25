@@ -159,19 +159,6 @@ const (
 	ContentBlockResource     ContentBlockKind = "resource"
 )
 
-func (b ContentBlock) MarshalJSON() ([]byte, error) {
-	if len(b) == 0 {
-		return []byte("null"), nil
-	}
-	return json.RawMessage(b).MarshalJSON()
-}
-
-func (b *ContentBlock) UnmarshalJSON(data []byte) error {
-	raw := append(json.RawMessage(nil), data...)
-	*b = ContentBlock(raw)
-	return nil
-}
-
 type DecodedContentBlock interface {
 	ContentKind() ContentBlockKind
 }
@@ -253,17 +240,10 @@ const (
 	RequestPermissionOutcomeSelected  = "selected"
 )
 
-func (o RequestPermissionOutcome) MarshalJSON() ([]byte, error) {
-	if len(o) == 0 {
-		return []byte("null"), nil
-	}
-	return json.RawMessage(o).MarshalJSON()
-}
-
-func (o *RequestPermissionOutcome) UnmarshalJSON(data []byte) error {
-	raw := append(json.RawMessage(nil), data...)
-	*o = RequestPermissionOutcome(raw)
-	return nil
+// SessionConfigValue encodes the value-id variant of a session/set_config_option
+// value, the default when the request carries no type discriminator.
+func SessionConfigValue(id SessionConfigValueID) json.RawMessage {
+	return mustRaw(id)
 }
 
 func CancelledPermissionOutcome() RequestPermissionOutcome {

@@ -42,6 +42,13 @@ func TestGeneratedTypesMarshal(t *testing.T) {
 	if string(b) != `{"protocolVersion":1}` {
 		t.Fatalf("InitializeRequest JSON = %s", b)
 	}
+	b, err = json.Marshal(SetSessionConfigOptionRequest{SessionID: "s", ConfigID: "model", Value: SessionConfigValue("gpt-6-sol")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(b) != `{"configId":"model","sessionId":"s","value":"gpt-6-sol"}` {
+		t.Fatalf("SetSessionConfigOptionRequest JSON = %s", b)
+	}
 }
 
 func TestGeneratedEnumsCoverSchemaOneOfConstants(t *testing.T) {

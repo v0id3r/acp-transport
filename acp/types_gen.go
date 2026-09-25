@@ -208,7 +208,7 @@ type Content struct {
 	Content ContentBlock   `json:"content"`
 }
 
-type ContentBlock json.RawMessage
+type ContentBlock = json.RawMessage
 
 type ContentChunk struct {
 	Meta      map[string]any `json:"_meta,omitempty"`
@@ -303,17 +303,17 @@ type ElicitationID string
 
 type ElicitationPropertySchema struct {
 	Meta        map[string]any    `json:"_meta,omitempty"`
-	Default     any               `json:"default,omitempty"`
+	Default     json.RawMessage   `json:"default,omitempty"`
 	Description string            `json:"description,omitempty"`
 	Enum        []string          `json:"enum,omitempty"`
 	Format      *StringFormat     `json:"format,omitempty"`
 	Items       *MultiSelectItems `json:"items,omitempty"`
 	MaxItems    int               `json:"maxItems,omitempty"`
 	MaxLength   int               `json:"maxLength,omitempty"`
-	Maximum     any               `json:"maximum,omitempty"`
+	Maximum     json.RawMessage   `json:"maximum,omitempty"`
 	MinItems    int               `json:"minItems,omitempty"`
 	MinLength   int               `json:"minLength,omitempty"`
-	Minimum     any               `json:"minimum,omitempty"`
+	Minimum     json.RawMessage   `json:"minimum,omitempty"`
 	OneOf       []EnumOption      `json:"oneOf,omitempty"`
 	Pattern     string            `json:"pattern,omitempty"`
 	Title       string            `json:"title,omitempty"`
@@ -664,7 +664,7 @@ type ReleaseTerminalResponse struct {
 
 type RequestID = json.RawMessage
 
-type RequestPermissionOutcome json.RawMessage
+type RequestPermissionOutcome = json.RawMessage
 
 type RequestPermissionRequest struct {
 	Meta      map[string]any     `json:"_meta,omitempty"`
@@ -841,7 +841,7 @@ type SetSessionConfigOptionRequest struct {
 	Meta      map[string]any  `json:"_meta,omitempty"`
 	ConfigID  SessionConfigID `json:"configId"`
 	SessionID SessionID       `json:"sessionId"`
-	Value     any             `json:"value,omitempty"`
+	Value     json.RawMessage `json:"value,omitempty"`
 }
 
 type SetSessionConfigOptionResponse struct {

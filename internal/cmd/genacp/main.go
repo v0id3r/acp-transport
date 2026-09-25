@@ -153,23 +153,12 @@ func writeDef(buf *bytes.Buffer, name string, def *schemaDef) {
 	}
 
 	typ := goType(def, false)
-	if typ == "json.RawMessage" && !hasJSONMethods(goName) {
+	if typ == "json.RawMessage" {
+		// A defined []byte type would drop RawMessage's JSON methods.
 		fmt.Fprintf(buf, "type %s = %s\n\n", goName, typ)
 		return
 	}
 	fmt.Fprintf(buf, "type %s %s\n\n", goName, typ)
-}
-
-// hasJSONMethods names raw unions that acp/decode.go gives JSON methods. Every
-// other raw union aliases json.RawMessage: a defined []byte type would drop
-// RawMessage's methods and fail to decode objects.
-func hasJSONMethods(goName string) bool {
-	switch goName {
-	case "ContentBlock", "RequestPermissionOutcome":
-		return true
-	default:
-		return false
-	}
 }
 
 func isObject(name string, def *schemaDef) bool {
@@ -245,7 +234,7 @@ func collectObjectProperties(def *schemaDef, out map[string]*schemaDef, seen map
 
 func mergeProperty(out map[string]*schemaDef, key string, prop *schemaDef) {
 	if existing, ok := out[key]; ok && goType(existing, true) != goType(prop, true) {
-		out[key] = &schemaDef{Type: "any"}
+		out[key] = &schemaDef{}
 		return
 	}
 	out[key] = prop
@@ -339,9 +328,6 @@ func goType(def *schemaDef, field bool) string {
 	}
 	if def.Ref != "" {
 		return refName(def.Ref)
-	}
-	if hasType(def, "any") {
-		return "any"
 	}
 	if len(def.AllOf) == 1 {
 		return goType(def.AllOf[0], field)
