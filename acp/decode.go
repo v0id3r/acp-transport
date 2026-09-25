@@ -240,10 +240,17 @@ const (
 	RequestPermissionOutcomeSelected  = "selected"
 )
 
-// SessionConfigValue encodes the value-id variant of a session/set_config_option
-// value, the default when the request carries no type discriminator.
-func SessionConfigValue(id SessionConfigValueID) json.RawMessage {
+// EncodeSessionConfigValue encodes the value-id variant of a
+// session/set_config_option value, the default when the request carries no
+// type discriminator.
+func EncodeSessionConfigValue(id SessionConfigValueID) json.RawMessage {
 	return mustRaw(id)
+}
+
+// ValueID decodes the value-id variant of the request's value.
+func (r SetSessionConfigOptionRequest) ValueID() (SessionConfigValueID, bool) {
+	var id SessionConfigValueID
+	return id, json.Unmarshal(r.Value, &id) == nil
 }
 
 func CancelledPermissionOutcome() RequestPermissionOutcome {

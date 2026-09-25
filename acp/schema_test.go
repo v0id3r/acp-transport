@@ -42,12 +42,22 @@ func TestGeneratedTypesMarshal(t *testing.T) {
 	if string(b) != `{"protocolVersion":1}` {
 		t.Fatalf("InitializeRequest JSON = %s", b)
 	}
-	b, err = json.Marshal(SetSessionConfigOptionRequest{SessionID: "s", ConfigID: "model", Value: SessionConfigValue("gpt-6-sol")})
+	b, err = json.Marshal(SetSessionConfigOptionRequest{SessionID: "s", ConfigID: "model", Value: EncodeSessionConfigValue("gpt-6-sol")})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if string(b) != `{"configId":"model","sessionId":"s","value":"gpt-6-sol"}` {
 		t.Fatalf("SetSessionConfigOptionRequest JSON = %s", b)
+	}
+	var decoded SetSessionConfigOptionRequest
+	if err := json.Unmarshal(b, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if id, ok := decoded.ValueID(); !ok || id != "gpt-6-sol" {
+		t.Fatalf("ValueID = %q, %v", id, ok)
+	}
+	if _, ok := (SetSessionConfigOptionRequest{Value: json.RawMessage(`true`)}).ValueID(); ok {
+		t.Fatal("boolean value decoded as a value id")
 	}
 }
 
