@@ -16,7 +16,7 @@ The module is intentionally layered:
 go generate ./acp
 ```
 
-The generator reads `testdata/acp-schema/schema.json` and `meta.json`, copied from the stable `schema/v1` files of upstream release `schema-v1.23.0`. Plain object and enum definitions become Go types; complex ACP unions are represented as `json.RawMessage`.
+The generator reads `testdata/acp-schema/schema.json` and `meta.json`, copied from the stable `schema/v1` files of upstream release `schema-v1.32.0`. Plain object and enum definitions become Go types; complex ACP unions are represented as `json.RawMessage`.
 
 ## Test
 

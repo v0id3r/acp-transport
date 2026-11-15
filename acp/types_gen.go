@@ -181,7 +181,9 @@ type ClientResponse = json.RawMessage
 
 type ClientSessionCapabilities struct {
 	Meta          map[string]any                    `json:"_meta,omitempty"`
+	Compaction    *CompactionCapabilities           `json:"compaction,omitempty"`
 	ConfigOptions *SessionConfigOptionsCapabilities `json:"configOptions,omitempty"`
+	Notices       *NoticeCapabilities               `json:"notices,omitempty"`
 }
 
 type CloseSessionRequest struct {
@@ -191,6 +193,34 @@ type CloseSessionRequest struct {
 
 type CloseSessionResponse struct {
 	Meta map[string]any `json:"_meta,omitempty"`
+}
+
+type CompactionCapabilities struct {
+}
+
+type CompactionID string
+
+type CompactionStatus string
+
+const (
+	CompactionStatusInProgress CompactionStatus = "in_progress"
+	CompactionStatusCompleted  CompactionStatus = "completed"
+	CompactionStatusFailed     CompactionStatus = "failed"
+	CompactionStatusCancelled  CompactionStatus = "cancelled"
+)
+
+type CompactionSummaryChunk struct {
+	Meta         map[string]any `json:"_meta,omitempty"`
+	CompactionID CompactionID   `json:"compactionId"`
+	Content      ContentBlock   `json:"content"`
+}
+
+type CompactionUpdate struct {
+	Meta         map[string]any   `json:"_meta,omitempty"`
+	CompactionID CompactionID     `json:"compactionId"`
+	Error        string           `json:"error,omitempty"`
+	Status       CompactionStatus `json:"status"`
+	Summary      []ContentBlock   `json:"summary,omitempty"`
 }
 
 type CompleteElicitationNotification struct {
@@ -481,6 +511,7 @@ type LoadSessionRequest struct {
 	Cwd                   string         `json:"cwd"`
 	MCPServers            []MCPServer    `json:"mcpServers"`
 	SessionID             SessionID      `json:"sessionId"`
+	SystemPrompt          *SystemPrompt  `json:"systemPrompt,omitempty"`
 }
 
 type LoadSessionResponse struct {
@@ -555,6 +586,7 @@ type NewSessionRequest struct {
 	AdditionalDirectories []string       `json:"additionalDirectories,omitempty"`
 	Cwd                   string         `json:"cwd"`
 	MCPServers            []MCPServer    `json:"mcpServers"`
+	SystemPrompt          *SystemPrompt  `json:"systemPrompt,omitempty"`
 }
 
 type NewSessionResponse struct {
@@ -563,6 +595,24 @@ type NewSessionResponse struct {
 	Modes         *SessionModeState     `json:"modes,omitempty"`
 	SessionID     SessionID             `json:"sessionId"`
 }
+
+type Notice struct {
+	Meta        map[string]any `json:"_meta,omitempty"`
+	Description string         `json:"description,omitempty"`
+	Severity    NoticeSeverity `json:"severity"`
+	Title       string         `json:"title"`
+}
+
+type NoticeCapabilities struct {
+}
+
+type NoticeSeverity string
+
+const (
+	NoticeSeverityInfo    NoticeSeverity = "info"
+	NoticeSeverityWarning NoticeSeverity = "warning"
+	NoticeSeverityError   NoticeSeverity = "error"
+)
 
 type NumberPropertySchema struct {
 	Meta        map[string]any `json:"_meta,omitempty"`
@@ -695,6 +745,7 @@ type ResumeSessionRequest struct {
 	Cwd                   string         `json:"cwd"`
 	MCPServers            []MCPServer    `json:"mcpServers,omitempty"`
 	SessionID             SessionID      `json:"sessionId"`
+	SystemPrompt          *SystemPrompt  `json:"systemPrompt,omitempty"`
 }
 
 type ResumeSessionResponse struct {
@@ -726,6 +777,7 @@ type SessionCapabilities struct {
 	Delete                *SessionDeleteCapabilities                `json:"delete,omitempty"`
 	List                  *SessionListCapabilities                  `json:"list,omitempty"`
 	Resume                *SessionResumeCapabilities                `json:"resume,omitempty"`
+	SystemPrompt          *SessionSystemPromptCapabilities          `json:"systemPrompt,omitempty"`
 }
 
 type SessionCloseCapabilities struct {
@@ -835,6 +887,20 @@ type SessionResumeCapabilities struct {
 	Meta map[string]any `json:"_meta,omitempty"`
 }
 
+type SessionSystemPromptCapabilities struct {
+	Meta map[string]any                       `json:"_meta,omitempty"`
+	Mode *SessionSystemPromptModeCapabilities `json:"mode,omitempty"`
+}
+
+type SessionSystemPromptModeCapabilities struct {
+	Meta     map[string]any                           `json:"_meta,omitempty"`
+	Override *SessionSystemPromptOverrideCapabilities `json:"override,omitempty"`
+}
+
+type SessionSystemPromptOverrideCapabilities struct {
+	Meta map[string]any `json:"_meta,omitempty"`
+}
+
 type SessionUpdate = json.RawMessage
 
 type SetSessionConfigOptionRequest struct {
@@ -895,6 +961,19 @@ type StringPropertySchema struct {
 	Pattern     string         `json:"pattern,omitempty"`
 	Title       string         `json:"title,omitempty"`
 }
+
+type SystemPrompt struct {
+	Meta    map[string]any   `json:"_meta,omitempty"`
+	Content []ContentBlock   `json:"content"`
+	Mode    SystemPromptMode `json:"mode"`
+}
+
+type SystemPromptMode string
+
+const (
+	SystemPromptModeAppend   SystemPromptMode = "append"
+	SystemPromptModeOverride SystemPromptMode = "override"
+)
 
 type Terminal struct {
 	Meta       map[string]any `json:"_meta,omitempty"`
