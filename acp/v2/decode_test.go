@@ -35,6 +35,23 @@ func TestDecodeStateUpdateWithBackgroundAndError(t *testing.T) {
 	}
 }
 
+func TestDecodeStateUpdateMeta(t *testing.T) {
+	update, err := DecodeSessionUpdate(json.RawMessage(`{
+		"sessionUpdate": "state_update",
+		"state": "idle",
+		"stopReason": "error",
+		"_meta": {"jaz": {"sessionFailure": {"id": "turn-1:error", "actions": ["retry"]}}}
+	}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := update.(StateSessionUpdate)
+	jaz, _ := state.Meta["jaz"].(map[string]any)
+	if failure, _ := jaz["sessionFailure"].(map[string]any); failure["id"] != "turn-1:error" {
+		t.Fatalf("meta = %+v", state.Meta)
+	}
+}
+
 func TestDecodeStateUpdateOmittedBackground(t *testing.T) {
 	update, err := DecodeSessionUpdate(json.RawMessage(`{"sessionUpdate":"state_update","state":"running"}`))
 	if err != nil {

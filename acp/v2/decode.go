@@ -259,7 +259,7 @@ type StateUpdateEvent struct {
 	State      string
 	StopReason string
 	Error      *Error
-	Meta       map[string]any
+	Meta       map[string]any `json:"_meta,omitempty"`
 	Background []BackgroundWorkItem
 	// BackgroundReported distinguishes an omitted background list (not
 	// reported) from a concrete one ([] means no background work).
